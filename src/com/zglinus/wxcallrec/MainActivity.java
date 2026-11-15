@@ -35,10 +35,11 @@ public class MainActivity extends Activity {
     private static final int REQ_NOTIF = 2;
     private static final String PREFS = "settings";
     private static final String KEY_AUTO = "auto";
+    private static final String KEY_BOOT = "boot";
     private static final long TICK_MS = 250L;
 
     private AudioManager am;
-    private Switch swAuto;
+    private Switch swAuto, swBoot;
     private TextView tvStatus, tvPerm, tvLog;
     private ScrollView logBox;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -127,6 +128,23 @@ public class MainActivity extends Activity {
         swAuto.setOnCheckedChangeListener((b, checked) -> setAuto(checked));
         row.addView(swAuto);
         root.addView(row);
+
+        LinearLayout rowBoot = new LinearLayout(this);
+        rowBoot.setOrientation(LinearLayout.HORIZONTAL);
+        rowBoot.setGravity(Gravity.CENTER_VERTICAL);
+        TextView lblBoot = new TextView(this);
+        lblBoot.setText("开机自启");
+        lblBoot.setTextSize(16);
+        rowBoot.addView(lblBoot, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        swBoot = new Switch(this);
+        swBoot.setChecked(prefs().getBoolean(KEY_BOOT, false));
+        swBoot.setOnCheckedChangeListener((b, checked) -> {
+            prefs().edit().putBoolean(KEY_BOOT, checked).apply();
+            EventLog.add("SVC", checked ? "开机自启：已打开" : "开机自启：已关闭");
+        });
+        rowBoot.addView(swBoot);
+        root.addView(rowBoot);
 
         tvStatus = new TextView(this);
         tvStatus.setTextSize(12);
