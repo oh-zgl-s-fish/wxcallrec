@@ -102,3 +102,18 @@
 
 - 仅供个人使用。**录音前请确认你已获得对方同意**，各地对通话录音的合法性要求不同。
 - 本仓库只含源码，不含构建脚本与产物。
+
+## 九、许可证
+
+本项目以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](LICENSE)。
+
+这意味着：你可以自由使用、修改、再分发，但分发时必须同样以 GPLv3 开放源码，并保留版权声明与免责条款。本程序不提供任何担保。
+
+```
+Copyright (C) 2026 zglinus
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+```
