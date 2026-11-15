@@ -1,0 +1,10 @@
+# 构建链与产物不纳入版本库
+build.sh
+build/
+*.apk
+*.apk.idsig
+*.jks
+*.keystore
+SHA256SUMS
+DEVLOG.md
+*.bak
