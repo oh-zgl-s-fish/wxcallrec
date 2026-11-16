@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式 -->
+    <color name="sheet_bg">#FF14171C</color>
+    <color name="sheet_track">#FF394048</color>
+    <color name="accent">#FF4C8DFF</color>
+    <color name="bar_played">#FF4C8DFF</color>
+    <color name="bar_pending">#FF2E353D</color>
+    <color name="bar_head">#FFC857</color>
+    <color name="text_muted">#FF9AA0A6</color>
+    <color name="text_faint">#FF6B7079</color>
+</resources>

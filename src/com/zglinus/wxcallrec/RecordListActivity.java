@@ -92,7 +92,7 @@ public class RecordListActivity extends Activity {
                 TextView b = new TextView(RecordListActivity.this);
                 b.setText(it.line2());
                 b.setTextSize(11);
-                b.setTextColor(0xFF9AA0A6);
+                b.setTextColor(getColor(R.color.text_muted));
                 b.setTypeface(Typeface.MONOSPACE);
                 row.addView(b);
                 return row;

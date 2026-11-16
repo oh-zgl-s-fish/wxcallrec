@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#0E1116</color>
+
+    <!-- 浅色模式 -->
+    <color name="sheet_bg">#FFF4F5F7</color>
+    <color name="sheet_track">#FFD6DAE0</color>
+    <color name="accent">#FF2F6FE0</color>
+    <color name="bar_played">#FF2F6FE0</color>
+    <color name="bar_pending">#FFCFD4DB</color>
+    <color name="bar_head">#FFD08A12</color>
+    <color name="text_muted">#FF6B7079</color>
+    <color name="text_faint">#FF8A8F98</color>
 </resources>

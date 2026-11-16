@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
 
         TextView sub = new TextView(this);
         sub.setTextSize(11);
-        sub.setTextColor(0xFF9AA0A6);
+        sub.setTextColor(getColor(R.color.text_muted));
         sub.setPadding(0, dp(2), 0, dp(12));
         sub.setText("录音源 VOICE_RECOGNITION · 接通后开录 · 30 秒分段落盘");
         root.addView(sub);
@@ -161,13 +161,13 @@ public class MainActivity extends Activity {
 
         tvPerm = new TextView(this);
         tvPerm.setTextSize(11);
-        tvPerm.setTextColor(0xFF9AA0A6);
+        tvPerm.setTextColor(getColor(R.color.text_muted));
         tvPerm.setPadding(0, dp(8), 0, dp(6));
         root.addView(tvPerm);
 
         TextView hint = new TextView(this);
         hint.setTextSize(11);
-        hint.setTextColor(0xFF9AA0A6);
+        hint.setTextColor(getColor(R.color.text_muted));
         hint.setPadding(0, 0, 0, dp(8));
         hint.setText("第一次用，三项都要开，缺一不可——\n"
                 + "① 麦克风权限\n"
@@ -190,7 +190,7 @@ public class MainActivity extends Activity {
         TextView copyright = new TextView(this);
         copyright.setText("© 2026 zglinus · 仅供个人使用");
         copyright.setTextSize(10);
-        copyright.setTextColor(0xFF6B7079);
+        copyright.setTextColor(getColor(R.color.text_faint));
         copyright.setGravity(Gravity.CENTER);
         copyright.setPadding(0, dp(6), 0, dp(10));
         root.addView(copyright, new LinearLayout.LayoutParams(

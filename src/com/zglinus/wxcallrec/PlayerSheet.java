@@ -74,7 +74,7 @@ public class PlayerSheet extends LinearLayout {
         setOrientation(VERTICAL);
 
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF14171C);
+        bg.setColor(ctx.getColor(R.color.sheet_bg));
         bg.setCornerRadii(new float[]{dp(20), dp(20), dp(20), dp(20), 0, 0, 0, 0});
         setBackground(bg);
         setPadding(dp(16), dp(8), dp(16), dp(10));
@@ -123,7 +123,7 @@ public class PlayerSheet extends LinearLayout {
         tvParams = new TextView(ctx);
         tvParams.setTextSize(10);
         tvParams.setTypeface(Typeface.MONOSPACE);
-        tvParams.setTextColor(0xFF9AA0A6);
+        tvParams.setTextColor(ctx.getColor(R.color.text_muted));
         tvParams.setLineSpacing(0, 1.15f);
         tvParams.setPadding(0, dp(4), 0, dp(2));
         addView(tvParams, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -160,7 +160,7 @@ public class PlayerSheet extends LinearLayout {
         btnPlay.setText("▶");
         btnPlay.setAllCaps(false);
         btnPlay.setTextSize(20);
-        btnPlay.setTextColor(0xFF4C8DFF);
+        btnPlay.setTextColor(ctx.getColor(R.color.accent));
         btnPlay.setBackgroundColor(0x00000000);
         btnPlay.setOnClickListener(v -> toggle());
         rowB.addView(btnPlay, new LayoutParams(0, dp(48), 1.3f));
@@ -181,7 +181,7 @@ public class PlayerSheet extends LinearLayout {
         btnMiniPlay.setText("▶");
         btnMiniPlay.setAllCaps(false);
         btnMiniPlay.setTextSize(18);
-        btnMiniPlay.setTextColor(0xFF4C8DFF);
+        btnMiniPlay.setTextColor(ctx.getColor(R.color.accent));
         btnMiniPlay.setBackgroundColor(0x00000000);
         btnMiniPlay.setOnClickListener(v -> toggle());
         miniBar.addView(btnMiniPlay, new LayoutParams(dp(44), dp(40)));
@@ -250,8 +250,9 @@ public class PlayerSheet extends LinearLayout {
         SeekBar s = new SeekBar(ctx);
         s.setMax(STEP);
         try {
-            s.getProgressDrawable().setTint(0xFF4C8DFF);
-            if (s.getThumb() != null) s.getThumb().setTint(0xFF4C8DFF);
+            int accent = ctx.getColor(R.color.accent);
+            s.getProgressDrawable().setTint(accent);
+            if (s.getThumb() != null) s.getThumb().setTint(accent);
         } catch (Throwable ignored) {}
         s.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override

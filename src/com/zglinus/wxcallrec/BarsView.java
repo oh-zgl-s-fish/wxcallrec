@@ -29,9 +29,9 @@ public class BarsView extends View {
 
     public BarsView(Context ctx) {
         super(ctx);
-        playedPaint.setColor(0xFF4C8DFF);
-        pendingPaint.setColor(0xFF2E353D);
-        headPaint.setColor(0xFFFFC857);
+        playedPaint.setColor(ctx.getColor(R.color.bar_played));
+        pendingPaint.setColor(ctx.getColor(R.color.bar_pending));
+        headPaint.setColor(ctx.getColor(R.color.bar_head));
         headPaint.setStrokeWidth(2.5f);
         slop = ViewConfiguration.get(ctx).getScaledTouchSlop();
         setClickable(true);
