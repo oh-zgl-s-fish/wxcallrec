@@ -71,6 +71,11 @@ public class RecordService extends Service implements NotifyListener.Hook {
     private long incomingAt;
     private long goneAt;
     private long lastInCallAt;
+    private long inCallNotifAt;      // "语音通话中"通知到来的时刻
+    private int micRetries;          // 开麦后无信号重开次数
+    private final android.os.Handler ui =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final long MODE_FALLBACK_MS = 5000;
 
     private Recorder recorder;
     private final List<File> segments = new ArrayList<>();
@@ -167,8 +172,35 @@ public class RecordService extends Service implements NotifyListener.Hook {
                 prepare();
             }
             if (state == PREHEAT) {
-                startRecording();
+                inCallNotifAt = System.currentTimeMillis();
+                int mode = am.getMode();
+                boolean established = mode == AudioManager.MODE_IN_COMMUNICATION
+                        || mode == AudioManager.MODE_IN_CALL;
+                if (established) {
+                    EventLog.add("SVC", "通知到 · 模式已在通话，开麦");
+                    startRecording();
+                } else {
+                    // 通知可能比真正接通早好几秒，这里只登记，等模式确认
+                    EventLog.add("SVC", "通知到 · 等模式确认后再开麦");
+                    refresh("接通中 · " + (nickname.isEmpty() ? "未知" : nickname) + " · 等链路就绪");
+                }
             }
+        }
+    }
+
+    /** 开麦后 1 秒还是没有信号，说明可能抢在接通前开了，关掉重开一次（只重试一次）。 */
+    private void verifyFirstSecond() {
+        synchronized (this) {
+            if (state != RECORDING || recorder == null) return;
+            if (recorder.sawSignal() || micRetries >= 1) return;
+            int mode = am.getMode();
+            if (mode != AudioManager.MODE_IN_COMMUNICATION
+                    && mode != AudioManager.MODE_IN_CALL) return;
+            micRetries++;
+            EventLog.add("SVC", "开麦 1 秒无信号，重开一次（疑似抢在接通前）");
+            recorder.stop(false);
+            recorder = null;
+            ui.postDelayed(this::startRecording, 400);
         }
     }
 
@@ -184,6 +216,8 @@ public class RecordService extends Service implements NotifyListener.Hook {
     /** 来电只登记，不开麦克风：这时候开的声音流，通话一建立就会被降级静音。 */
     private void prepare() {
         segments.clear();
+        micRetries = 0;
+        inCallNotifAt = 0;
         state = PREHEAT;
         incomingAt = System.currentTimeMillis();
         EventLog.add("SVC", "来电 · " + (nickname.isEmpty() ? "未知" : nickname));
@@ -225,6 +259,7 @@ public class RecordService extends Service implements NotifyListener.Hook {
         }
         state = RECORDING;
         lastInCallAt = System.currentTimeMillis();
+        ui.postDelayed(this::verifyFirstSecond, 1000);
         EventLog.add("SVC", "开录 · " + (nickname.isEmpty() ? "未知" : nickname));
         refresh("录音中 · " + (nickname.isEmpty() ? "未知" : nickname));
     }
@@ -310,6 +345,10 @@ public class RecordService extends Service implements NotifyListener.Hook {
                 if (state == PREHEAT) {
                     if (inCall) {
                         action = 1;
+                    } else if (inCallNotifAt > 0 && now - inCallNotifAt > MODE_FALLBACK_MS) {
+                        inCallNotifAt = 0;
+                        action = 1;
+                        EventLog.add("SVC", "模式 " + (MODE_FALLBACK_MS / 1000) + " 秒未确认，仍按通知开麦");
                     } else if (goneAt > 0 && now - goneAt > CONFIRM_TIMEOUT_MS) {
                         action = 2;
                         why = "通知移除后 " + (CONFIRM_TIMEOUT_MS / 1000) + " 秒未确认（拒接/未接）";
@@ -336,7 +375,7 @@ public class RecordService extends Service implements NotifyListener.Hook {
             else if (action == 3) doFinish();
 
             try {
-                Thread.sleep(500);
+                Thread.sleep(state == IDLE ? 500 : 150);
             } catch (InterruptedException e) {
                 return;
             }
