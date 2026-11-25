@@ -45,6 +45,8 @@ public final class Recorder {
     private volatile long totalMs;
     private volatile boolean sawSignal;
     private volatile Boolean silenced;
+    private volatile double levelRms;     // 最近 1 秒的 RMS（0..32767）
+    private volatile int levelPeak;       // 最近 1 秒的峰值采样
 
     private short[] segBuf;
     private int segPos;
@@ -132,6 +134,16 @@ public final class Recorder {
     }
 
     /** 最近一次读到的系统静音状态；null 表示这台机器取不到。 */
+    /** 最近 1 秒的 RMS（0..32767）。 */
+    public double levelRms() {
+        return levelRms;
+    }
+
+    /** 最近 1 秒的峰值采样（0..32767）。 */
+    public int levelPeak() {
+        return levelPeak;
+    }
+
     public Boolean silenced() {
         return silenced;
     }
@@ -151,6 +163,12 @@ public final class Recorder {
         long windowStart = System.currentTimeMillis();
         int windowPeak = 0;
 
+        // 量化指标窗口：1 秒
+        long metricStart = System.currentTimeMillis();
+        long metricSumSq = 0;
+        long metricCount = 0;
+        int metricPeak = 0;
+
         try {
             while (running) {
                 int read = rec != null ? rec.read(chunk, 0, chunk.length) : -1;
@@ -163,11 +181,26 @@ public final class Recorder {
                 }
 
                 for (int i = 0; i < read; i++) {
-                    int a = chunk[i] < 0 ? -chunk[i] : chunk[i];
+                    int v = chunk[i];
+                    int a = v < 0 ? -v : v;
                     if (a > windowPeak) windowPeak = a;
+                    if (a > metricPeak) metricPeak = a;
+                    metricSumSq += (long) v * v;
                 }
+                metricCount += read;
 
                 long now = System.currentTimeMillis();
+
+                // 每 1 秒刷新一次量化指标
+                if (now - metricStart >= 1000) {
+                    levelRms = metricCount > 0 ? Math.sqrt((double) metricSumSq / metricCount) : 0;
+                    levelPeak = metricPeak;
+                    metricSumSq = 0;
+                    metricCount = 0;
+                    metricPeak = 0;
+                    metricStart = now;
+                }
+
                 if (now - windowStart >= SILENT_WATCH_MS) {
                     if (windowPeak == 0) {
                         silentMs += now - windowStart;

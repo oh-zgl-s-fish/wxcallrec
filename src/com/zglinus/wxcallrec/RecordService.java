@@ -359,13 +359,16 @@ public class RecordService extends Service implements NotifyListener.Hook {
                 } else if (state == RECORDING) {
                     if (!inCall && now - lastInCallAt > END_DEBOUNCE_MS) {
                         action = 3;
-                    } else if (now % 3000 < 520) {
+                    } else if (now % 1000 < 160) {
                         long ms = recorder != null ? recorder.totalMs() : 0;
                         Boolean muted = recorder != null ? recorder.silenced() : null;
-                        refresh(String.format(Locale.US, "录音中 · %s · %d:%02d · 静音=%s",
-                                nickname.isEmpty() ? "未知" : nickname,
-                                ms / 60000, (ms / 1000) % 60,
-                                muted == null ? "未知" : (muted ? "是" : "否")));
+                        double rms = recorder != null ? recorder.levelRms() : 0;
+                        int peak = recorder != null ? recorder.levelPeak() : 0;
+                        refreshLive(
+                                String.format(Locale.US, "录音中 · %s · %d:%02d",
+                                        nickname.isEmpty() ? "未知" : nickname,
+                                        ms / 60000, (ms / 1000) % 60),
+                                meterText(rms, peak, muted, segments.size()));
                     }
                 }
             }
@@ -383,6 +386,28 @@ public class RecordService extends Service implements NotifyListener.Hook {
     }
 
     // ---------- 通知 ----------
+
+    /** 电平条 + 量化指标；dBFS 越小越静，-60 以下算无声。 */
+    private String meterText(double rms, int peak, Boolean muted, int segs) {
+        int dbfs = rms > 0.5 ? (int) Math.round(20 * Math.log10(rms / 32768.0)) : -100;
+        int pdbfs = peak > 0 ? (int) Math.round(20 * Math.log10(peak / 32768.0)) : -100;
+        int bars = 8;
+        int filled = dbfs <= -60 ? 0 : Math.min(bars, (dbfs + 60) * bars / 60);
+        StringBuilder bar = new StringBuilder(bars);
+        for (int i = 0; i < bars; i++) bar.append(i < filled ? '▮' : '▯');
+        return String.format(Locale.US,
+                "电平 %d dBFS %s · 峰 %d · %d 段 · 静音=%s",
+                dbfs, bar, pdbfs, segs, muted == null ? "未知" : (muted ? "是" : "否"));
+    }
+
+    private void refreshLive(String title, String text) {
+        Notification n = base().setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .build();
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(NOTIF, n);
+    }
 
     private void refresh(String text) {
         Notification n = build(text);
