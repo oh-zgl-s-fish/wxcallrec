@@ -387,17 +387,12 @@ public class RecordService extends Service implements NotifyListener.Hook {
 
     // ---------- 通知 ----------
 
-    /** 电平条 + 量化指标；dBFS 越小越静，-60 以下算无声。 */
+    /** 量化指标：只看数字。dBFS 越小越静，−100 表示这一秒完全没数据。 */
     private String meterText(double rms, int peak, Boolean muted, int segs) {
         int dbfs = rms > 0.5 ? (int) Math.round(20 * Math.log10(rms / 32768.0)) : -100;
         int pdbfs = peak > 0 ? (int) Math.round(20 * Math.log10(peak / 32768.0)) : -100;
-        int bars = 8;
-        int filled = dbfs <= -60 ? 0 : Math.min(bars, (dbfs + 60) * bars / 60);
-        StringBuilder bar = new StringBuilder(bars);
-        for (int i = 0; i < bars; i++) bar.append(i < filled ? '▮' : '▯');
-        return String.format(Locale.US,
-                "电平 %d dBFS %s · 峰 %d · %d 段 · 静音=%s",
-                dbfs, bar, pdbfs, segs, muted == null ? "未知" : (muted ? "是" : "否"));
+        return String.format(Locale.US, "电平 %d dBFS · 峰 %d · %d 段 · 静音=%s",
+                dbfs, pdbfs, segs, muted == null ? "未知" : (muted ? "是" : "否"));
     }
 
     private void refreshLive(String title, String text) {
