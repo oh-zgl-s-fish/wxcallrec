@@ -37,7 +37,7 @@ import java.util.Locale;
  * 来电就打开麦克风进环形缓冲（10 秒，不落盘），确认后把这段一起补进去，
  * 才真的不漏开头那句。
  */
-public class RecordService extends Service implements NotifyListener.Hook {
+public class RecordService extends Service implements NotifyListener.Hook, VoipHook {
 
     public static final String ACTION_START = "com.zglinus.wxcallrec.START";
     public static final String ACTION_STOP = "com.zglinus.wxcallrec.STOP";
@@ -75,7 +75,11 @@ public class RecordService extends Service implements NotifyListener.Hook {
     private int micRetries;          // 开麦后无信号重开次数
     private final android.os.Handler ui =
             new android.os.Handler(android.os.Looper.getMainLooper());
-    private static final long MODE_FALLBACK_MS = 5000;
+    public static volatile VoipHook voipHook;
+
+    private boolean voipSeen;
+    private static final String KEY_DELAY = "delay_ms";
+    private static final int DELAY_DEFAULT = 750;
 
     private Recorder recorder;
     private final List<File> segments = new ArrayList<>();
@@ -93,11 +97,13 @@ public class RecordService extends Service implements NotifyListener.Hook {
         am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         workDir = new File(getCacheDir(), "calls");
         NotifyListener.hook = this;
+        voipHook = this;
     }
 
     @Override
     public void onDestroy() {
         if (NotifyListener.hook == this) NotifyListener.hook = null;
+        if (voipHook == this) voipHook = null;
         shutdown();
         super.onDestroy();
     }
@@ -162,30 +168,55 @@ public class RecordService extends Service implements NotifyListener.Hook {
     @Override
     public void onInCall(String nick) {
         synchronized (this) {
+            // 通知只用来取昵称；开不开录由无障碍「微信通话界面」说了算
             if (!nick.isEmpty()) nickname = nick;
-            if (state == RECORDING) return;
-            if (state == IDLE) {
+        }
+    }
+
+    @Override
+    public void onVoipWindow(String className, boolean isVoip) {
+        synchronized (this) {
+            if (isVoip) {
                 if (paused) return;
-                // 极端情况：没收到来电通知但已经在通话里
-                incomingAt = System.currentTimeMillis();
-                goneAt = 0;
-                prepare();
-            }
-            if (state == PREHEAT) {
-                inCallNotifAt = System.currentTimeMillis();
-                int mode = am.getMode();
-                boolean established = mode == AudioManager.MODE_IN_COMMUNICATION
-                        || mode == AudioManager.MODE_IN_CALL;
-                if (established) {
-                    EventLog.add("SVC", "通知到 · 模式已在通话，开麦");
-                    startRecording();
-                } else {
-                    // 通知可能比真正接通早好几秒，这里只登记，等模式确认
-                    EventLog.add("SVC", "通知到 · 等模式确认后再开麦");
-                    refresh("接通中 · " + (nickname.isEmpty() ? "未知" : nickname) + " · 等链路就绪");
+                voipSeen = true;
+                if (state == IDLE) {
+                    incomingAt = System.currentTimeMillis();
+                    goneAt = 0;
+                    prepare();
+                }
+                if (state != PREHEAT) return;
+                int d = delayMs();
+                ui.removeCallbacks(startAfterDelay);
+                ui.postDelayed(startAfterDelay, d);
+                EventLog.add("SVC", "微信通话界面 · " + d + "ms 后开麦");
+                refresh("接通中 · " + (nickname.isEmpty() ? "未知" : nickname) + " · " + d + "ms 后开麦");
+            } else {
+                voipSeen = false;
+                ui.removeCallbacks(startAfterDelay);
+                if (state == PREHEAT) {
+                    EventLog.add("SVC", "还没开麦就离开通话界面，取消");
+                    doCancel("离开通话界面");
                 }
             }
         }
+    }
+
+    private final Runnable startAfterDelay = new Runnable() {
+        @Override
+        public void run() {
+            synchronized (RecordService.this) {
+                if (state != PREHEAT || !voipSeen || recorder != null) return;
+                EventLog.add("SVC", "延迟到 · 开麦");
+                startRecording();
+            }
+        }
+    };
+
+    private int delayMs() {
+        int v = getSharedPreferences("settings", MODE_PRIVATE).getInt(KEY_DELAY, DELAY_DEFAULT);
+        if (v < 0) v = 0;
+        if (v > 3000) v = 3000;
+        return v;
     }
 
     /** 开麦后 1 秒还是没有信号，说明可能抢在接通前开了，关掉重开一次（只重试一次）。 */
@@ -216,6 +247,7 @@ public class RecordService extends Service implements NotifyListener.Hook {
     /** 来电只登记，不开麦克风：这时候开的声音流，通话一建立就会被降级静音。 */
     private void prepare() {
         segments.clear();
+        voipSeen = false;
         micRetries = 0;
         inCallNotifAt = 0;
         state = PREHEAT;
@@ -343,13 +375,7 @@ public class RecordService extends Service implements NotifyListener.Hook {
                 if (inCall) lastInCallAt = now;
 
                 if (state == PREHEAT) {
-                    if (inCall) {
-                        action = 1;
-                    } else if (inCallNotifAt > 0 && now - inCallNotifAt > MODE_FALLBACK_MS) {
-                        inCallNotifAt = 0;
-                        action = 1;
-                        EventLog.add("SVC", "模式 " + (MODE_FALLBACK_MS / 1000) + " 秒未确认，仍按通知开麦");
-                    } else if (goneAt > 0 && now - goneAt > CONFIRM_TIMEOUT_MS) {
+                    if (goneAt > 0 && now - goneAt > CONFIRM_TIMEOUT_MS) {
                         action = 2;
                         why = "通知移除后 " + (CONFIRM_TIMEOUT_MS / 1000) + " 秒未确认（拒接/未接）";
                     } else if (now - incomingAt > PREHEAT_MAX_MS) {

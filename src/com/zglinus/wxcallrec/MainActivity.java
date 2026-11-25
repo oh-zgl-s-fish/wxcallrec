@@ -21,6 +21,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,6 +37,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "settings";
     private static final String KEY_AUTO = "auto";
     private static final String KEY_BOOT = "boot";
+    private static final String KEY_DELAY = "delay_ms";
     private static final long TICK_MS = 250L;
 
     private AudioManager am;
@@ -145,6 +147,46 @@ public class MainActivity extends Activity {
         });
         rowBoot.addView(swBoot);
         root.addView(rowBoot);
+
+        // 开录延迟：微信通话界面出现后等多久才开麦
+        LinearLayout delayBox = new LinearLayout(this);
+        delayBox.setOrientation(LinearLayout.VERTICAL);
+        delayBox.setPadding(0, dp(6), 0, 0);
+
+        final TextView tvDelay = new TextView(this);
+        tvDelay.setTextSize(16);
+        final SeekBar sbDelay = new SeekBar(this);
+        sbDelay.setMax(36);   // 200..2000ms，步进 50
+
+        int curDelay = prefs().getInt(KEY_DELAY, 750);
+        if (curDelay < 200) curDelay = 200;
+        if (curDelay > 2000) curDelay = 2000;
+        sbDelay.setProgress((curDelay - 200) / 50);
+        tvDelay.setText("开录延迟 " + curDelay + " ms");
+
+        sbDelay.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                int ms = 200 + progress * 50;
+                tvDelay.setText("开录延迟 " + ms + " ms");
+                if (fromUser) prefs().edit().putInt(KEY_DELAY, ms).apply();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar sb) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar sb) {
+                int ms = 200 + sb.getProgress() * 50;
+                EventLog.add("SVC", "开录延迟改为 " + ms + "ms");
+            }
+        });
+
+        delayBox.addView(tvDelay, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        delayBox.addView(sbDelay, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(delayBox);
 
         tvStatus = new TextView(this);
         tvStatus.setTextSize(12);

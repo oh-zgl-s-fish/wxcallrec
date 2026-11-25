@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">牛马保命神器</string>
-    <string name="a11y_desc">通话中采集音频依赖它。不读取屏幕内容、不记录任何数据。</string>
+    <string name="a11y_desc">用于判断微信是否进入语音通话界面：只读取界面所属的应用与页面名称，不读取屏幕内容、不记录文字。</string>
 </resources>
